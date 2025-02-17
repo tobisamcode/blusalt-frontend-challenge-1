@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LightState } from "../types";
 import Light from "./light";
 import { TrafficLightWrapper } from "../styles/light-styles";
@@ -7,42 +7,73 @@ import { Button } from "../styles/button.style";
 export default function Trafficlight() {
   const [streetAlight, setStreetALight] = useState<LightState>("green");
   const [streetBLight, setStreetBLight] = useState<LightState>("red");
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    const cycleLight = () => {
-      if (streetAlight === "green") {
-        setTimeout(() => {
-          setStreetALight("yellow");
-        }, 10000);
+  const startCycle = () => {
+    if (intervalRef.current) {
+      clearTimeout(intervalRef.current);
+    }
 
-        setTimeout(() => {
-          setStreetALight("red");
-          setStreetBLight("green");
-        }, 15000);
-      } else {
-        setTimeout(() => {
-          setStreetBLight("yellow");
-        }, 10000);
+    let step = 0;
 
-        setTimeout(() => {
+    const cycle = () => {
+      switch (step) {
+        case 0:
           setStreetALight("green");
           setStreetBLight("red");
-        }, 15000);
+          intervalRef.current = setTimeout(() => {
+            step = 1;
+            cycle();
+          }, 10000);
+          break;
+        case 1:
+          setStreetALight("yellow");
+          setStreetBLight("yellow");
+          intervalRef.current = setTimeout(() => {
+            step = 2;
+            cycle();
+          }, 5000);
+          break;
+        case 2:
+          setStreetALight("red");
+          setStreetBLight("green");
+          intervalRef.current = setTimeout(() => {
+            step = 3;
+            cycle();
+          }, 10000);
+          break;
+        case 3:
+          setStreetALight("yellow");
+          setStreetBLight("yellow");
+          intervalRef.current = setTimeout(() => {
+            step = 0;
+            cycle();
+          }, 5000);
+          break;
       }
     };
 
-    cycleLight();
+    cycle();
+  };
 
-    const interval = setInterval(() => {
-      cycleLight();
-    }, 20000);
-
-    return () => clearInterval(interval);
-  }, [streetAlight, streetBLight]);
+  useEffect(() => {
+    startCycle();
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   const resetLights = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
     setStreetALight("green");
     setStreetBLight("red");
+
+    setTimeout(() => {
+      startCycle();
+    }, 500);
   };
 
   return (
